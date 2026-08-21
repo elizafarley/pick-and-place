@@ -74,7 +74,7 @@ async def main() -> None:
         # TODO 2: confirm the connection — list every resource on the machine.
         # You should see arm-1, gripper-1, cam-1, the poses as Switches,
         # and the obstacles as grippers.
-        print(machine.resource_names)
+        #print(machine.resource_names)
 
         # TODO 3: get typed resource handles.
         gripper = Gripper.from_robot(machine, GRIPPER_NAME)
@@ -115,32 +115,51 @@ async def main() -> None:
         #     print("No objects detected")
         #     return
         # obj = max(objects, key=lambda o: len(o.point_cloud))
-        # label = obj.geometries.geometries[0].label
-        # print(f"Detected: {label}")
+        # geometry = obj.geometries.geometries[0]
+        # print(f"Detected: {geometry.label}")
         #
         # # Create the object pose in the camera frame
         # obj_in_cam = PoseInFrame(
         #     reference_frame=CAMERA_NAME,
-        #     pose=obj.geometries.geometries[0].center,
+        #     pose=geometry.center,
         # )
+        # print(f"obj_in_cam: {obj_in_cam}")
 
         # TODO 6: compute the approach and grasp poses (Phase 5.6).
+        # cam-1 is wrist-mounted, so its frame moves every time the arm moves.
+        # Derive each offset in the camera frame (where obj_in_cam already
+        # lives), then transform that target to world — the one frame that
+        # stays fixed no matter where the arm travels next.
+        #
         # The approach pose is worked for you — a clearance standoff above the block:
-        #     approach_pose = offset_pose(obj_in_cam.pose, APPROACH_MM)
+        # approach_pose = offset_pose(obj_in_cam.pose, APPROACH_MM)
+        # 
         #
         # Now YOU compute the grasp pose. motion.move drives the gripper-1 frame
         # (the gripper's TCP, already offset down the arm) to the target — so the
         # grasp offset is the gripper-TCP-to-fingertip depth (GRIPPER_LENGTH_MM),
-        # not the whole arm reach. Fill in the offset:
-        #     grasp_pose = offset_pose(obj_in_cam.pose, ___)   # TODO: your offset
+        # not the whole arm reach. Fill in the offset, then transform to world:
+        # grasp_pose = offset_pose(obj_in_cam.pose, ___)   # TODO: your offset
+         
 
-        # TODO 7: run the full perception-guided pick loop (Phase 5.6).
+        # TODO 7: Transform the approach and grasp poses to world frame 
+        # world_approach_pose = await machine.transform_pose(
+        #     PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose), "world"
+        # )
+        # print(f"world_approach_pose: {world_approach_pose}")
+        #
+        # world_grasp_pose = await machine.transform_pose(
+        #     PoseInFrame(reference_frame=CAMERA_NAME, pose=grasp_pose), "world"
+        # )
+        # print(f"world_grasp_pose: {world_grasp_pose}")
+
+        # TODO 8: run the full perception-guided pick loop (Phase 5.6).
         # Hybrid approach: motion.move for the pick (Cartesian precision),
         # arm-position-saver switches for the place (pre-measured, reliable).
         #
-        # await motion.move("gripper-1", PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose))
+        # await motion.move(component_name=GRIPPER_NAME, destination=world_approach_pose)
         # await gripper.open()
-        # await motion.move("gripper-1", PoseInFrame(reference_frame=CAMERA_NAME, pose=grasp_pose))
+        # await motion.move(component_name=GRIPPER_NAME, destination=world_grasp_pose)
         # await gripper.grab()
         # await asyncio.sleep(0.3)
         # await travel.set_position(2)

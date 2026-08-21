@@ -118,28 +118,33 @@ async def pick_and_place(
 
     # 4. Derive the approach and grasp poses from the object center.
     approach_pose = offset_pose(obj_in_cam.pose, APPROACH_MM)
+    
     grasp_pose = offset_pose(obj_in_cam.pose, GRIPPER_LENGTH_MM)
 
-    # 5. Pick: move above, open, descend straight down, grab, lift.
-    # LinearConstraint = the tutorial's optional Phase 5 follow-up: forces a straight-down descent
-    linear_down = Constraints(
-        linear_constraint=[LinearConstraint(line_tolerance_mm=5.0)]
+
+    # 5. Transform the approach and grasp poses reference from camera to world.
+    world_approach_pose = await machine.transform_pose(
+        PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose), "world"
     )
+    world_grasp_pose = await machine.transform_pose(
+        PoseInFrame(reference_frame=CAMERA_NAME, pose=grasp_pose), "world"
+    )
+
+
+    # 6. Pick: move above, open, descend, grab, lift.
     await motion.move(
         component_name=GRIPPER_NAME,
-        destination=PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose),
+        destination=world_approach_pose,
     )
     await gripper.open()
     await asyncio.sleep(SETTLE_S)
     await motion.move(
-        component_name=GRIPPER_NAME,
-        destination=PoseInFrame(reference_frame=CAMERA_NAME, pose=grasp_pose),
-        constraints=linear_down,
-    )
+      component_name=GRIPPER_NAME,
+       destination=world_grasp_pose)
     await gripper.grab()
     await asyncio.sleep(SETTLE_S)
 
-    # 6. Place: lift to the safe carrying height, drop at the saved bin pose.
+    # 7. Place: lift to the safe carrying height, drop at the saved bin pose.
     #    Hybrid approach — motion.move for the pick (Cartesian precision),
     #    saved switches for the place (pre-measured, reliable).
     await travel.set_position(2)
