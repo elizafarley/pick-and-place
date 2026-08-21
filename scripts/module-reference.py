@@ -16,10 +16,7 @@ from viam.services.generic import Generic as GenericService
 from viam.services.motion import MotionClient
 import asyncio
 
-
-GRIPPER_LENGTH_MM = (
-    -60
-)
+GRIPPER_LENGTH_MM = -60
 APPROACH_MM = -100
 SETTLE_S = 0.3
 
@@ -180,7 +177,7 @@ class MyGenericService(GenericService, EasyResource):
         await self.home_pose.set_position(2)
         # 2. Detect. vision-segment fuses the 2D shape detections with depth into
         #    3D objects, each with a point cloud and a label.
-        objects = await self.vision.get_object_point_clouds("cam-1")
+        objects = await self.vision.get_object_point_clouds(self.camera_name)
         if not objects:
             print("No objects detected")
             return False
@@ -220,13 +217,13 @@ class MyGenericService(GenericService, EasyResource):
         )
         # 4. Pick: move above, open, descend down, grab, lift.
         await self.motion.move(
-            "gripper-1",
+            self.gripper_name,
             PoseInFrame(reference_frame="world", pose=world_approach.pose),
         )
         await self.gripper.open()
         await asyncio.sleep(SETTLE_S)
         await self.motion.move(
-            "gripper-1",
+            self.gripper_name,
             PoseInFrame(reference_frame="world", pose=world_grasp.pose),
         )
         await self.gripper.grab()
