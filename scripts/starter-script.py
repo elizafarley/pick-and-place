@@ -125,41 +125,39 @@ async def main() -> None:
         # )
         # print(f"obj_in_cam: {obj_in_cam}")
 
-        # TODO 6: compute the approach and grasp poses (Phase 5.6).
+        # TODO 6: compute the approach pose and the grasp descent (Phase 5.6).
         # cam-1 is wrist-mounted, so its frame moves every time the arm moves.
-        # Derive each offset in the camera frame (where obj_in_cam already
-        # lives), then transform that target to world — the one frame that
-        # stays fixed no matter where the arm travels next.
+        # The approach move is resolved from the camera frame while the arm is
+        # still at home, so it lands accurately above the block.
         #
         # The approach pose is worked for you — a clearance standoff above the block:
         # approach_pose = offset_pose(obj_in_cam.pose, APPROACH_MM)
-        # 
         #
-        # Now YOU compute the grasp pose. motion.move drives the gripper-1 frame
-        # (the gripper's TCP, already offset down the arm) to the target — so the
-        # grasp offset is the gripper-TCP-to-fingertip depth (GRIPPER_LENGTH_MM),
-        # not the whole arm reach. Fill in the offset, then transform to world:
-        # grasp_pose = offset_pose(obj_in_cam.pose, ___)   # TODO: your offset
-         
+        # For the grasp, don't compute another camera-frame pose. Instead descend
+        # the remaining distance straight down in the gripper's OWN frame (TODO 7).
+        # That avoids the wrist-mounted camera frame shifting once the arm moves
+        # for the approach. Fill in the remaining descent, as a positive value:
+        # grasp_distance = ___   # TODO: (APPROACH_MM - GRIPPER_LENGTH_MM) as a positive mm value
 
-        # TODO 7: Transform the approach and grasp poses to world frame 
-        # world_approach_pose = await machine.transform_pose(
-        #     PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose), "world"
-        # )
-        # print(f"world_approach_pose: {world_approach_pose}")
-        #
-        # world_grasp_pose = await machine.transform_pose(
-        #     PoseInFrame(reference_frame=CAMERA_NAME, pose=grasp_pose), "world"
-        # )
-        # print(f"world_grasp_pose: {world_grasp_pose}")
-
-        # TODO 8: run the full perception-guided pick loop (Phase 5.6).
+        # TODO 7: run the full perception-guided pick loop (Phase 5.6).
         # Hybrid approach: motion.move for the pick (Cartesian precision),
         # arm-position-saver switches for the place (pre-measured, reliable).
         #
-        # await motion.move(component_name=GRIPPER_NAME, destination=world_approach_pose)
+        # # Move above the block in the camera frame, then open.
+        # await motion.move(
+        #     component_name=GRIPPER_NAME,
+        #     destination=PoseInFrame(reference_frame=CAMERA_NAME, pose=approach_pose),
+        # )
         # await gripper.open()
-        # await motion.move(component_name=GRIPPER_NAME, destination=world_grasp_pose)
+        #
+        # # Descend the remaining distance straight down in the gripper's frame.
+        # await motion.move(
+        #     component_name=GRIPPER_NAME,
+        #     destination=PoseInFrame(
+        #         reference_frame=GRIPPER_NAME,
+        #         pose=Pose(x=0, y=0, z=grasp_distance, o_x=0, o_y=0, o_z=1, theta=0),
+        #     ),
+        # )
         # await gripper.grab()
         # await asyncio.sleep(0.3)
         # await travel.set_position(2)
